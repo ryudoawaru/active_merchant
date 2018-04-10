@@ -252,9 +252,13 @@ module ActiveMerchant #:nodoc:
       end
 
       def add_email(xml, options)
-        return unless options[:email]
+        return unless options[:execute_threed] || options[:email]
         xml.tag! 'shopper' do
-          xml.tag! 'shopperEmailAddress', options[:email]
+          xml.tag! 'shopperEmailAddress', options[:email] if  options[:email]
+          xml.tag! 'browser' do
+            xml.tag! 'acceptHeader', options[:accept_header] 
+            xml.tag! 'userAgentHeader', options[:user_agent]
+          end
         end
       end
 
@@ -323,7 +327,8 @@ module ActiveMerchant #:nodoc:
 
       def commit(action, request, *success_criteria)
         xmr = ssl_post(url, request, 'Content-Type' => 'text/xml', 'Authorization' => encoded_credentials)
-        raw = parse(action, xmr)
+        raw = parse(action, xmr.body)
+        raw[:cookie] = xmr.response['Set-Cookie'] if options[:execute_threed]
         success, message = success_and_message_from(raw, success_criteria)
 
         Response.new(
@@ -344,6 +349,16 @@ module ActiveMerchant #:nodoc:
 
       def url
         test? ? self.test_url : self.live_url
+      end
+
+       # Override the regular handle response so we can access the headers
+      def handle_response(response)
+        case response.code.to_i
+        when 200...300
+          response
+        else
+          raise ResponseError.new(response)
+        end
       end
 
       # success_criteria can be:
