@@ -47,6 +47,7 @@ require 'active_merchant/posts_data'
 require 'active_merchant/billing'
 require 'active_merchant/version'
 require 'active_merchant/country'
+require 'active_merchant/billing/tappay_token'
 
 module ActiveMerchant
   def self.deprecated(message, caller=Kernel.caller[1])

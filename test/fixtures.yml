@@ -1135,6 +1135,11 @@ swipe_checkout:
   region: NZ
 
 # Working credentials, no need to replace
+tappay:
+  merchant_id: <%=ENV['TAPPAY_MERCHANT_ID']%>
+  partner_key: <%=ENV['TAPPAY_PARTNER_KEY']%>
+
+# Working credentials, no need to replace
 telr:
   merchant_id: 16715
   api_key: WZV7W#gbMVw^kSBk
