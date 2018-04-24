@@ -11,8 +11,6 @@ module ActiveMerchant #:nodoc:
         :refund => "/tpc/transaction/refund"
       }
 
-
-
       self.supported_countries = ['TW']
       self.default_currency = 'TWD'
       self.supported_cardtypes = [:visa, :master, :american_express, :discover]
@@ -29,8 +27,9 @@ module ActiveMerchant #:nodoc:
       end
 
       # 這段是 pay by prime
-      def authorize(money, prime, options = {})
+      def authorize(money, pot, options = {})
         post_data = options.merge(base_post_data)
+        post_data[:details] = options[:description]
         post_data[:amount] = money
         post_data[:prime] = pot
         commit "pay-by-prime", post_data
@@ -39,6 +38,7 @@ module ActiveMerchant #:nodoc:
       #pot -> Prime or Token Data from Tappay
       def purchase(money, pot , options={})
         post_data = options.merge(base_post_data)
+        post_data[:details] = options[:description]
         post_data[:amount] = money
         post_data[:card_key] = pot[:key]
         post_data[:card_token] = pot[:token]
@@ -47,7 +47,6 @@ module ActiveMerchant #:nodoc:
 
       def base_post_data
         {
-          details: options[:description],
           partner_key: @partner_key,
           merchant_id: @merchant_id,
           currency: "TWD"
@@ -91,14 +90,19 @@ module ActiveMerchant #:nodoc:
       def commit(action, parameters)
         url = File.join (test? ? test_url : live_url), URIS[action.to_sym]
         response = parse(ssl_post(url, parameters.to_json, req_headers))
+        is_success = success_from(response)
         Response.new(
-          success_from(response),
+          is_success,
           message_from(response),
           response,
-          authorization: successful?(response) ? response_authorization(response) : nil,
+          authorization: is_success ? response_authorization(response) : nil,
           test: test?,
           error_code: error_code_from(response)
         )
+      end
+
+      def test?
+        @options[:test_mode]
       end
 
       def success_from(response)
