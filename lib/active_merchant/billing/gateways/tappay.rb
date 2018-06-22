@@ -27,22 +27,23 @@ module ActiveMerchant #:nodoc:
       end
 
       # 這段是 pay by prime
-      def authorize(money, pot, options = {})
+      def authorize(money, prime_or_token, options = {})
         post_data = options.merge(base_post_data)
         post_data[:details] = options[:description]
         post_data[:amount] = money
-        post_data[:prime] = pot
-        commit "pay-by-prime", post_data
+        if prime_or_token.is_a? Hash
+          post_data[:card_key] = prime_or_token[:key]
+          post_data[:card_token] = prime_or_token[:token]
+          commit "pay-by-token", post_data
+        else
+          post_data[:prime] = prime_or_token
+          commit "pay-by-prime", post_data
+        end
       end
 
-      #pot -> Prime or Token Data from Tappay
-      def purchase(money, pot , options={})
-        post_data = options.merge(base_post_data)
-        post_data[:details] = options[:description]
-        post_data[:amount] = money
-        post_data[:card_key] = pot[:key]
-        post_data[:card_token] = pot[:token]
-        commit "pay-by-token", post_data
+      #prime_or_token -> Prime or Token Data from Tappay
+      def purchase(money, prime_or_token , options={})
+        authorize(money, prime_or_token , options)
       end
 
       def base_post_data
@@ -59,7 +60,8 @@ module ActiveMerchant #:nodoc:
 
       def refund(money, rec_trade_id, options={})
         params = {
-          rec_trade_id: rec_trade_id,
+          partner_key: @partner_key,
+          rec_trade_id: rec_trade_id
         }
         params[:amount] = money if money > 0
         commit('refund', params)
@@ -114,11 +116,7 @@ module ActiveMerchant #:nodoc:
       end
 
       def response_authorization(resp)
-        rh = {rec_trade_id: resp["rec_trade_id"]}
-        if x = resp.has_key?("card_secret")
-          rh[:card_token] = x["card_token"]
-          rh[:card_key] = x["card_key"]
-        end
+        resp["rec_trade_id"]
       end
 
       def error_code_from(response)
